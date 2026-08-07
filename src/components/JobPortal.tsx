@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Erc8183Job, AiAgent, ARC_TESTNET_CONFIG, ArcWalletState } from '../types/arc';
 import { executeArcOnChainTx } from '../utils/web3Tx';
 import { Layers, Play, CheckCircle, Clock, ExternalLink, ShieldAlert, Sparkles, RefreshCw, FileCode, Check, Send, AlertCircle, Loader2 } from 'lucide-react';
@@ -35,6 +35,16 @@ export const JobPortal: React.FC<JobPortalProps> = ({
   
   const [isTxPending, setIsTxPending] = useState(false);
   const [txError, setTxError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (selectedAgentForJob) {
+      setAssignedAgentId(selectedAgentForJob.id);
+      setJobTitle(`${selectedAgentForJob.name} - AI Task Execution`);
+      setJobDescription(`Task for ${selectedAgentForJob.name}: Execute security analysis and verify native USDC gas compliance.`);
+      setEscrowAmount(selectedAgentForJob.hourlyRateUsdc.toString());
+      setShowCreateModal(true);
+    }
+  }, [selectedAgentForJob]);
 
   const filteredJobs = jobs.filter((j) => {
     if (activeTabFilter === 'open') return j.status === 'open' || j.status === 'assigned' || j.status === 'executing';
@@ -509,7 +519,7 @@ export const JobPortal: React.FC<JobPortalProps> = ({
               <div className="flex items-center justify-end gap-3 pt-3 border-t border-white/10">
                 <button
                   type="button"
-                  disabled={isSubmittingTx}
+                  disabled={isTxPending}
                   onClick={() => {
                     setShowCreateModal(false);
                     onClearSelectedAgent();
@@ -520,10 +530,10 @@ export const JobPortal: React.FC<JobPortalProps> = ({
                 </button>
                 <button
                   type="submit"
-                  disabled={isSubmittingTx}
+                  disabled={isTxPending}
                   className="px-6 py-3 bg-[#0066FF] hover:bg-white hover:text-black text-white font-black text-xs uppercase tracking-wider transition-colors flex items-center gap-2 disabled:opacity-50"
                 >
-                  {isSubmittingTx ? (
+                  {isTxPending ? (
                     <>
                       <RefreshCw className="w-3.5 h-3.5 animate-spin" />
                       CONFIRMING IN METAMASK...
