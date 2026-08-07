@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Header } from './components/Header';
 import { WalletModal } from './components/WalletModal';
 import { AgentMarketplace } from './components/AgentMarketplace';
@@ -29,13 +29,71 @@ export default function App() {
 
   // Wallet State
   const [wallet, setWallet] = useState<ArcWalletState>({
-    isConnected: true,
-    address: '0x70997970C51812dc3A010C7d01b50e0d17dc79C8',
-    nativeGasUsdcBalance: 250.0,
-    erc20UsdcBalance: 1500.0,
-    isArcTestnet: true,
+    isConnected: false,
+    address: '',
+    nativeGasUsdcBalance: 0,
+    erc20UsdcBalance: 0,
+    isArcTestnet: false,
     providerType: 'simulated',
   });
+
+  // Auto-detect existing Web3 wallet on mount & listen for changes
+  useEffect(() => {
+    if (typeof window !== 'undefined' && (window as any).ethereum) {
+      const ethereum = (window as any).ethereum;
+
+      // Check if accounts already authorized
+      ethereum
+        .request({ method: 'eth_accounts' })
+        .then((accounts: string[]) => {
+          if (accounts && accounts.length > 0) {
+            setWallet({
+              isConnected: true,
+              address: accounts[0],
+              nativeGasUsdcBalance: 250.0,
+              erc20UsdcBalance: 1500.0,
+              isArcTestnet: true,
+              providerType: 'metamask',
+            });
+          }
+        })
+        .catch((err: any) => console.warn('eth_accounts check error:', err));
+
+      // Handle account changes
+      const handleAccountsChanged = (accounts: string[]) => {
+        if (accounts.length === 0) {
+          setWallet({
+            isConnected: false,
+            address: '',
+            nativeGasUsdcBalance: 0,
+            erc20UsdcBalance: 0,
+            isArcTestnet: false,
+            providerType: 'simulated',
+          });
+        } else {
+          setWallet((prev) => ({
+            ...prev,
+            isConnected: true,
+            address: accounts[0],
+            providerType: 'metamask',
+          }));
+        }
+      };
+
+      // Handle chain changes
+      const handleChainChanged = () => {
+        window.location.reload();
+      };
+
+      ethereum.on?.('accountsChanged', handleAccountsChanged);
+      ethereum.on?.('chainChanged', handleChainChanged);
+
+      return () => {
+        ethereum.removeListener?.('accountsChanged', handleAccountsChanged);
+        ethereum.removeListener?.('chainChanged', handleChainChanged);
+      };
+    }
+  }, []);
 
   // Data Collections
   const [agents, setAgents] = useState<AiAgent[]>(INITIAL_AI_AGENTS);
@@ -148,6 +206,7 @@ export default function App() {
             jobs={jobs}
             agents={agents}
             selectedAgentForJob={selectedAgentForJob}
+            wallet={wallet}
             onClearSelectedAgent={() => setSelectedAgentForJob(null)}
             onCreateJob={handleCreateJob}
             onUpdateJob={handleUpdateJob}
@@ -158,6 +217,7 @@ export default function App() {
         {activeTab === 'escrow' && (
           <ArcEscrowStudio
             escrows={escrows}
+            wallet={wallet}
             onCreateEscrow={handleCreateEscrow}
             onUpdateEscrowStatus={handleUpdateEscrowStatus}
           />
@@ -166,6 +226,7 @@ export default function App() {
         {activeTab === 'bridge' && (
           <CctpBridgeView
             bridgeTxs={bridgeTxs}
+            wallet={wallet}
             onInitiateBridge={handleInitiateBridge}
           />
         )}
