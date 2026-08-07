@@ -50,7 +50,7 @@ export const WalletModal: React.FC<WalletModalProps> = ({
       const userAddress = accounts[0];
       let network = await provider.getNetwork();
 
-      // Check Arc Testnet chain ID
+      // Check Arc Testnet chain ID & attempt network switch or add
       if (Number(network.chainId) !== ARC_TESTNET_CONFIG.chainId) {
         try {
           await ethereum.request({
@@ -58,8 +58,8 @@ export const WalletModal: React.FC<WalletModalProps> = ({
             params: [{ chainId: ARC_TESTNET_CONFIG.chainIdHex }],
           });
         } catch (switchError: any) {
-          // Chain not added to MetaMask yet
-          if (switchError.code === 4902 || switchError?.data?.originalError?.code === 4902) {
+          // If switch failed (e.g. chain not added or RPC error), try adding network
+          try {
             await ethereum.request({
               method: 'wallet_addEthereumChain',
               params: [
@@ -76,8 +76,9 @@ export const WalletModal: React.FC<WalletModalProps> = ({
                 },
               ],
             });
-          } else {
-            throw switchError;
+          } catch (addError: any) {
+            // RPC endpoint already exists or user declined prompt — non-fatal, proceed with account connection
+            console.warn('Network addition notice (non-fatal):', addError?.message || addError);
           }
         }
       }
