@@ -1,0 +1,6 @@
+{
+  "name": "Arc AI Agent & USDC Escrow Hub",
+  "description": "Arc Testnet AI Agent Job Marketplace, USDC Escrow Payments, and Wallet Connector based on Circle Arc L1 Builder Guide.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
