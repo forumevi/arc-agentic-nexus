@@ -14,7 +14,7 @@ export interface Web3TxResult {
  */
 export async function executeArcOnChainTx(
   wallet: ArcWalletState,
-  actionType: 'POST_JOB_ESCROW' | 'RELEASE_PAYOUT' | 'LOCK_VAULT' | 'CLAIM_FAUCET',
+  actionType: 'POST_JOB_ESCROW' | 'RELEASE_PAYOUT' | 'LOCK_VAULT' | 'CLAIM_FAUCET' | 'CCTP_BRIDGE_TRANSFER',
   details: {
     amountUsdc: number;
     title?: string;
