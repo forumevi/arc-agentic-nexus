@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
-import { Erc8183Job, AiAgent, ARC_TESTNET_CONFIG } from '../types/arc';
-import { Layers, Play, CheckCircle, Clock, ExternalLink, ShieldAlert, Sparkles, RefreshCw, FileCode, Check, Send } from 'lucide-react';
+import { Erc8183Job, AiAgent, ARC_TESTNET_CONFIG, ArcWalletState } from '../types/arc';
+import { executeArcOnChainTx } from '../utils/web3Tx';
+import { Layers, Play, CheckCircle, Clock, ExternalLink, ShieldAlert, Sparkles, RefreshCw, FileCode, Check, Send, AlertCircle, Loader2 } from 'lucide-react';
 
 interface JobPortalProps {
   jobs: Erc8183Job[];
   agents: AiAgent[];
   selectedAgentForJob: AiAgent | null;
+  wallet: ArcWalletState;
   onClearSelectedAgent: () => void;
   onCreateJob: (newJob: Erc8183Job) => void;
   onUpdateJob: (updatedJob: Erc8183Job) => void;
@@ -16,6 +18,7 @@ export const JobPortal: React.FC<JobPortalProps> = ({
   jobs,
   agents,
   selectedAgentForJob,
+  wallet,
   onClearSelectedAgent,
   onCreateJob,
   onUpdateJob,
@@ -29,6 +32,9 @@ export const JobPortal: React.FC<JobPortalProps> = ({
   const [assignedAgentId, setAssignedAgentId] = useState(selectedAgentForJob?.id || agents[0]?.id || '');
   const [executingJobId, setExecutingJobId] = useState<string | null>(null);
   const [activeTabFilter, setActiveTabFilter] = useState<'all' | 'open' | 'completed'>('all');
+  
+  const [isTxPending, setIsTxPending] = useState(false);
+  const [txError, setTxError] = useState<string | null>(null);
 
   const filteredJobs = jobs.filter((j) => {
     if (activeTabFilter === 'open') return j.status === 'open' || j.status === 'assigned' || j.status === 'executing';
@@ -36,11 +42,28 @@ export const JobPortal: React.FC<JobPortalProps> = ({
     return true;
   });
 
-  const handleCreateJobSubmit = (e: React.FormEvent) => {
+  const handleCreateJobSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!jobTitle.trim() || !jobDescription.trim()) return;
 
+    setTxError(null);
+    setIsTxPending(true);
+
+    const amount = parseFloat(escrowAmount) || 50;
     const agentObj = agents.find((a) => a.id === assignedAgentId);
+
+    // Trigger real Web3 transaction in MetaMask if connected via MetaMask
+    const txRes = await executeArcOnChainTx(wallet, 'POST_JOB_ESCROW', {
+      amountUsdc: amount,
+      title: jobTitle,
+    });
+
+    setIsTxPending(false);
+
+    if (!txRes.success) {
+      setTxError(txRes.error || 'MetaMask işlemi iptal edildi.');
+      return;
+    }
 
     const newJobObj: Erc8183Job = {
       id: `job-8183-${Date.now().toString().slice(-4)}`,
@@ -50,16 +73,16 @@ export const JobPortal: React.FC<JobPortalProps> = ({
       requirements: [
         'Arc Testnet USDC gas compliance check',
         'Detailed execution log generation',
-        'Verification score > 85%'
+        'Verification score > 85%',
       ],
-      escrowUsdc: parseFloat(escrowAmount) || 50,
+      escrowUsdc: amount,
       agentId: agentObj?.id,
       agentName: agentObj?.name,
       status: agentObj ? 'assigned' : 'open',
-      creatorAddress: '0x7099...79C8',
+      creatorAddress: wallet.address || '0x7099...79C8',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-      txHash: `0x${Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join('')}`
+      txHash: txRes.txHash,
     };
 
     onCreateJob(newJobObj);
@@ -67,6 +90,22 @@ export const JobPortal: React.FC<JobPortalProps> = ({
     onClearSelectedAgent();
     setJobTitle('');
     setJobDescription('');
+  };
+
+  const handleSettleJobWithWeb3 = async (job: Erc8183Job) => {
+    setIsTxPending(true);
+    const txRes = await executeArcOnChainTx(wallet, 'RELEASE_PAYOUT', {
+      amountUsdc: job.escrowUsdc,
+      title: job.title,
+    });
+    setIsTxPending(false);
+
+    if (!txRes.success) {
+      alert(txRes.error || 'MetaMask cüzdan onayı iptal edildi.');
+      return;
+    }
+
+    onSettleJob(job.id);
   };
 
   const handleRunAiExecution = async (job: Erc8183Job) => {
@@ -326,11 +365,21 @@ export const JobPortal: React.FC<JobPortalProps> = ({
                   {/* Action 2: Settle Job & Release Escrow */}
                   {job.status === 'completed' && (
                     <button
-                      onClick={() => onSettleJob(job.id)}
-                      className="px-5 py-3 bg-[#00FF41] text-black hover:bg-white font-black uppercase text-xs tracking-wider transition-colors flex items-center gap-2"
+                      onClick={() => handleSettleJobWithWeb3(job)}
+                      disabled={isTxPending}
+                      className="px-5 py-3 bg-[#00FF41] text-black hover:bg-white font-black uppercase text-xs tracking-wider transition-colors flex items-center gap-2 disabled:opacity-50"
                     >
-                      <Check className="w-4 h-4 stroke-[3]" />
-                      SETTLE & RELEASE {job.escrowUsdc} USDC ESCROW
+                      {isTxPending ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          METAMASK ONAYI BEKLENİYOR...
+                        </>
+                      ) : (
+                        <>
+                          <Check className="w-4 h-4 stroke-[3]" />
+                          SETTLE & RELEASE {job.escrowUsdc} USDC ESCROW
+                        </>
+                      )}
                     </button>
                   )}
                 </div>
@@ -436,6 +485,13 @@ export const JobPortal: React.FC<JobPortalProps> = ({
                 />
               </div>
 
+              {txError && (
+                <div className="p-3 bg-rose-500/10 border border-rose-500 text-rose-400 text-xs font-mono flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
+                  <span>{txError}</span>
+                </div>
+              )}
+
               <div className="p-4 bg-white/5 border border-white/20 text-xs font-mono text-white/80 space-y-1">
                 <div className="font-bold text-[#0066FF] flex items-center gap-1.5 uppercase tracking-wider">
                   <ShieldAlert className="w-4 h-4 text-[#0066FF]" /> ESCROW DEPOSIT GUARANTEE
@@ -443,24 +499,40 @@ export const JobPortal: React.FC<JobPortalProps> = ({
                 <p className="text-[11px] text-white/60">
                   {escrowAmount} USDC locked in Arc Escrow Contract ({ARC_TESTNET_CONFIG.escrowContractAddress.slice(0, 10)}...). Funds release upon verification.
                 </p>
+                {wallet?.isConnected && wallet?.providerType === 'metamask' && (
+                  <p className="text-[10px] text-[#00FF41] font-mono mt-1">
+                    ✓ MetaMask connected: Submitting will prompt a real transaction confirmation in MetaMask.
+                  </p>
+                )}
               </div>
 
               <div className="flex items-center justify-end gap-3 pt-3 border-t border-white/10">
                 <button
                   type="button"
+                  disabled={isSubmittingTx}
                   onClick={() => {
                     setShowCreateModal(false);
                     onClearSelectedAgent();
                   }}
-                  className="px-5 py-3 border border-white/20 text-white/80 hover:text-white text-xs font-bold uppercase tracking-wider"
+                  className="px-5 py-3 border border-white/20 text-white/80 hover:text-white text-xs font-bold uppercase tracking-wider disabled:opacity-50"
                 >
                   CANCEL
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-3 bg-[#0066FF] hover:bg-white hover:text-black text-white font-black text-xs uppercase tracking-wider transition-colors flex items-center gap-2"
+                  disabled={isSubmittingTx}
+                  className="px-6 py-3 bg-[#0066FF] hover:bg-white hover:text-black text-white font-black text-xs uppercase tracking-wider transition-colors flex items-center gap-2 disabled:opacity-50"
                 >
-                  <Send className="w-3.5 h-3.5" /> DEPOSIT ESCROW & POST JOB
+                  {isSubmittingTx ? (
+                    <>
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      CONFIRMING IN METAMASK...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="w-3.5 h-3.5" /> DEPOSIT ESCROW & POST JOB
+                    </>
+                  )}
                 </button>
               </div>
             </form>
