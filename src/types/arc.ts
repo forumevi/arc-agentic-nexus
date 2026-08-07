@@ -14,7 +14,7 @@ export interface ArcNetworkConfig {
 
 export const ARC_TESTNET_CONFIG: ArcNetworkConfig = {
   chainId: 5042002,
-  chainIdHex: '0x4cf0ea',
+  chainIdHex: '0x4cef52',
   name: 'Arc Testnet',
   rpcUrl: 'https://rpc.testnet.arc.io',
   explorerUrl: 'https://testnet.arcscan.app',
