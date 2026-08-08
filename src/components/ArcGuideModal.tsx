@@ -116,5 +116,8 @@ export const ArcGuideModal: React.FC<ArcGuideModalProps> = ({ isOpen, onClose })
     </div>
   );
 };
+<<<<<<< HEAD
 
 export default ArcGuideModal;
+=======
+>>>>>>> 50a4d1c634a5e056aeb319b5dcd3b8cba237df0e

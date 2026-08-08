@@ -135,5 +135,8 @@ Apache-2.0
     </div>
   );
 };
+<<<<<<< HEAD
 
 export default GitHubDeployModal;
+=======
+>>>>>>> 50a4d1c634a5e056aeb319b5dcd3b8cba237df0e

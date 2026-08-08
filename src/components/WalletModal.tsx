@@ -1,8 +1,13 @@
 import React, { useState } from 'react';
 import { ArcWalletState, ARC_TESTNET_CONFIG } from '../types/arc';
+<<<<<<< HEAD
 import { X, CheckCircle, ExternalLink, RefreshCw, AlertTriangle, LogOut, Wallet, Zap } from 'lucide-react';
 import { ethers } from 'ethers';
 import { getEthereumProvider } from '../utils/ethereumProvider';
+=======
+import { X, CheckCircle, ExternalLink, RefreshCw, AlertTriangle, LogOut, Wallet } from 'lucide-react';
+import { ethers } from 'ethers';
+>>>>>>> 50a4d1c634a5e056aeb319b5dcd3b8cba237df0e
 
 interface WalletModalProps {
   isOpen: boolean;
@@ -33,15 +38,21 @@ export const WalletModal: React.FC<WalletModalProps> = ({
     setConnectionError('');
 
     try {
+<<<<<<< HEAD
       const ethProvider = getEthereumProvider();
       if (!ethProvider) {
         setConnectionError(
           'MetaMask or Web3 wallet browser extension was not found. Please install MetaMask or click below to use a Simulated Testnet Account.'
         );
+=======
+      if (typeof window === 'undefined' || !(window as any).ethereum) {
+        setConnectionError('MetaMask or Web3 wallet browser extension was not found. Please install MetaMask or use a Simulated Testnet Account.');
+>>>>>>> 50a4d1c634a5e056aeb319b5dcd3b8cba237df0e
         setLoading(false);
         return;
       }
 
+<<<<<<< HEAD
       const provider = new ethers.BrowserProvider(ethProvider);
       
       // Request accounts safely
@@ -95,6 +106,54 @@ export const WalletModal: React.FC<WalletModalProps> = ({
       }
 
       // Fetch balance if connected
+=======
+      const ethereum = (window as any).ethereum;
+      const provider = new ethers.BrowserProvider(ethereum);
+      
+      // Request accounts
+      const accounts = await provider.send('eth_requestAccounts', []);
+      if (!accounts || accounts.length === 0) {
+        throw new Error('No accounts returned from wallet.');
+      }
+
+      const userAddress = accounts[0];
+      let network = await provider.getNetwork();
+
+      // Check Arc Testnet chain ID & attempt network switch or add
+      if (Number(network.chainId) !== ARC_TESTNET_CONFIG.chainId) {
+        try {
+          await ethereum.request({
+            method: 'wallet_switchEthereumChain',
+            params: [{ chainId: ARC_TESTNET_CONFIG.chainIdHex }],
+          });
+        } catch (switchError: any) {
+          // If switch failed (e.g. chain not added or RPC error), try adding network
+          try {
+            await ethereum.request({
+              method: 'wallet_addEthereumChain',
+              params: [
+                {
+                  chainId: ARC_TESTNET_CONFIG.chainIdHex,
+                  chainName: ARC_TESTNET_CONFIG.name,
+                  nativeCurrency: {
+                    name: 'USD Coin',
+                    symbol: 'USDC',
+                    decimals: 18,
+                  },
+                  rpcUrls: [ARC_TESTNET_CONFIG.rpcUrl],
+                  blockExplorerUrls: [ARC_TESTNET_CONFIG.explorerUrl],
+                },
+              ],
+            });
+          } catch (addError: any) {
+            // RPC endpoint already exists or user declined prompt — non-fatal, proceed with account connection
+            console.warn('Network addition notice (non-fatal):', addError?.message || addError);
+          }
+        }
+      }
+
+      // Fetch real balance if connected to Arc
+>>>>>>> 50a4d1c634a5e056aeb319b5dcd3b8cba237df0e
       let gasBalance = 250.0;
       try {
         const rawBalance = await provider.getBalance(userAddress);
@@ -118,6 +177,7 @@ export const WalletModal: React.FC<WalletModalProps> = ({
       setConnectionError('');
     } catch (err: any) {
       console.error('MetaMask connection error:', err);
+<<<<<<< HEAD
       let msg = err?.message || 'Failed to connect to MetaMask.';
       if (err?.code === 4001 || msg.includes('user rejected') || msg.includes('User rejected')) {
         msg = 'Connection request was rejected in MetaMask wallet.';
@@ -126,6 +186,9 @@ export const WalletModal: React.FC<WalletModalProps> = ({
       } else {
         msg = `Failed to connect to MetaMask: ${msg}. Click below to use the Simulated Arc Testnet Wallet instead.`;
       }
+=======
+      const msg = err?.message || 'Failed to connect MetaMask. Please unlock your wallet and try again.';
+>>>>>>> 50a4d1c634a5e056aeb319b5dcd3b8cba237df0e
       setConnectionError(msg);
     } finally {
       setLoading(false);
@@ -203,6 +266,7 @@ export const WalletModal: React.FC<WalletModalProps> = ({
         <div className="p-6 space-y-6">
           {/* Connection Error Banner */}
           {connectionError && (
+<<<<<<< HEAD
             <div className="p-4 bg-black border border-rose-500 text-rose-300 text-xs font-mono space-y-2">
               <div className="font-bold flex items-center gap-2 uppercase text-rose-400">
                 <AlertTriangle className="w-4 h-4 shrink-0" /> METAMASK / WALLET NOTICE
@@ -214,6 +278,13 @@ export const WalletModal: React.FC<WalletModalProps> = ({
               >
                 <span>⚡ CONNECT SIMULATED ACCOUNT INSTEAD</span>
               </button>
+=======
+            <div className="p-4 bg-black border border-rose-500 text-rose-300 text-xs font-mono space-y-1">
+              <div className="font-bold flex items-center gap-2 uppercase text-rose-400">
+                <AlertTriangle className="w-4 h-4 shrink-0" /> METAMASK CONNECTION ERROR
+              </div>
+              <p className="text-[11px] text-white/80 leading-relaxed font-sans">{connectionError}</p>
+>>>>>>> 50a4d1c634a5e056aeb319b5dcd3b8cba237df0e
             </div>
           )}
 

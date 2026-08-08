@@ -552,5 +552,8 @@ export const JobPortal: React.FC<JobPortalProps> = ({
     </div>
   );
 };
+<<<<<<< HEAD
 
 export default JobPortal;
+=======
+>>>>>>> 50a4d1c634a5e056aeb319b5dcd3b8cba237df0e

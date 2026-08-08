@@ -286,5 +286,8 @@ export const EscrowDashboard: React.FC<EscrowDashboardProps> = ({
     </div>
   );
 };
+<<<<<<< HEAD
 
 export default EscrowDashboard;
+=======
+>>>>>>> 50a4d1c634a5e056aeb319b5dcd3b8cba237df0e

@@ -8,6 +8,7 @@ export interface Web3TxResult {
 }
 
 /**
+<<<<<<< HEAD
  * Safely resolves the injected Web3 provider to avoid property redefinition conflicts (e.g. Zerion/MetaMask)
  */
 export function getSafeEthereumProvider(): any {
@@ -27,6 +28,8 @@ export function getSafeEthereumProvider(): any {
 }
 
 /**
+=======
+>>>>>>> 50a4d1c634a5e056aeb319b5dcd3b8cba237df0e
  * Triggers a real Web3 transaction on Arc Testnet via MetaMask if connected via MetaMask,
  * asking the user to confirm/sign the transaction in their browser wallet extension.
  * If connected via Simulated Account, generates a testnet tx hash.
@@ -40,20 +43,33 @@ export async function executeArcOnChainTx(
     recipient?: string;
   }
 ): Promise<Web3TxResult> {
+<<<<<<< HEAD
   const ethProvider = getSafeEthereumProvider();
 
+=======
+>>>>>>> 50a4d1c634a5e056aeb319b5dcd3b8cba237df0e
   // If user connected via real MetaMask (Injected Web3)
   if (
     wallet.isConnected &&
     wallet.providerType === 'metamask' &&
+<<<<<<< HEAD
     ethProvider
   ) {
     try {
       const provider = new ethers.BrowserProvider(ethProvider);
+=======
+    typeof window !== 'undefined' &&
+    (window as any).ethereum
+  ) {
+    try {
+      const ethereum = (window as any).ethereum;
+      const provider = new ethers.BrowserProvider(ethereum);
+>>>>>>> 50a4d1c634a5e056aeb319b5dcd3b8cba237df0e
       const signer = await provider.getSigner();
       const userAddress = await signer.getAddress();
 
       // Check network chain ID
+<<<<<<< HEAD
       try {
         const network = await provider.getNetwork();
         if (Number(network.chainId) !== ARC_TESTNET_CONFIG.chainId) {
@@ -83,6 +99,35 @@ export async function executeArcOnChainTx(
         }
       } catch (networkErr) {
         console.warn('Non-fatal network verification notice:', networkErr);
+=======
+      const network = await provider.getNetwork();
+      if (Number(network.chainId) !== ARC_TESTNET_CONFIG.chainId) {
+        try {
+          await ethereum.request({
+            method: 'wallet_switchEthereumChain',
+            params: [{ chainId: ARC_TESTNET_CONFIG.chainIdHex }],
+          });
+        } catch (switchErr: any) {
+          if (switchErr.code === 4902) {
+            try {
+              await ethereum.request({
+                method: 'wallet_addEthereumChain',
+                params: [
+                  {
+                    chainId: ARC_TESTNET_CONFIG.chainIdHex,
+                    chainName: ARC_TESTNET_CONFIG.name,
+                    nativeCurrency: { name: 'USD Coin', symbol: 'USDC', decimals: 18 },
+                    rpcUrls: [ARC_TESTNET_CONFIG.rpcUrl],
+                    blockExplorerUrls: [ARC_TESTNET_CONFIG.explorerUrl],
+                  },
+                ],
+              });
+            } catch (addErr) {
+              console.warn('Network addition notice:', addErr);
+            }
+          }
+        }
+>>>>>>> 50a4d1c634a5e056aeb319b5dcd3b8cba237df0e
       }
 
       // Destination address for escrow interaction
@@ -98,7 +143,11 @@ export async function executeArcOnChainTx(
         ethers.toUtf8Bytes(`ARC_TESTNET:${actionType}:${details.amountUsdc}_USDC:${(details.title || 'JOB').slice(0, 32)}`)
       );
 
+<<<<<<< HEAD
       // Trigger transaction in MetaMask popup
+=======
+      // Trigger transaction in MetaMask popup!
+>>>>>>> 50a4d1c634a5e056aeb319b5dcd3b8cba237df0e
       const tx = await signer.sendTransaction({
         to: destination,
         value: ethers.parseEther('0.0001'), // nominal native gas micro-transfer
@@ -127,7 +176,11 @@ export async function executeArcOnChainTx(
         return {
           txHash: '',
           success: false,
+<<<<<<< HEAD
           error: 'Transaction was rejected / cancelled in MetaMask wallet.',
+=======
+          error: 'İşlem MetaMask cüzdanında kullanıcı tarafından reddedildi / iptal edildi.',
+>>>>>>> 50a4d1c634a5e056aeb319b5dcd3b8cba237df0e
         };
       }
 
@@ -135,7 +188,11 @@ export async function executeArcOnChainTx(
       return {
         txHash: `0x${Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join('')}`,
         success: true,
+<<<<<<< HEAD
         error: `MetaMask notice: ${err?.message || 'Transaction created with simulated testnet confirmation.'}`,
+=======
+        error: `MetaMask uyarısı: ${err?.message || 'İşlem oluşturuldu ancak testnet blok doğrulaması simüle edildi.'}`,
+>>>>>>> 50a4d1c634a5e056aeb319b5dcd3b8cba237df0e
       };
     }
   }
@@ -146,4 +203,7 @@ export async function executeArcOnChainTx(
     success: true,
   };
 }
+<<<<<<< HEAD
 
+=======
+>>>>>>> 50a4d1c634a5e056aeb319b5dcd3b8cba237df0e
