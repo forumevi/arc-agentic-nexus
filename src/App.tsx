@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Header } from './components/Header';
 import { WalletModal } from './components/WalletModal';
+import { getEthereumProvider } from './utils/ethereumProvider';
 import { AgentMarketplace } from './components/AgentMarketplace';
 import { JobPortal } from './components/JobPortal';
 import { ArcEscrowStudio } from './components/ArcEscrowStudio';
@@ -39,59 +40,62 @@ export default function App() {
 
   // Auto-detect existing Web3 wallet on mount & listen for changes
   useEffect(() => {
-    if (typeof window !== 'undefined' && (window as any).ethereum) {
-      const ethereum = (window as any).ethereum;
+    try {
+      const ethereum = getEthereumProvider();
+      if (ethereum) {
+        // Check if accounts already authorized
+        ethereum
+          .request({ method: 'eth_accounts' })
+          .then((accounts: string[]) => {
+            if (accounts && accounts.length > 0) {
+              setWallet({
+                isConnected: true,
+                address: accounts[0],
+                nativeGasUsdcBalance: 250.0,
+                erc20UsdcBalance: 1500.0,
+                isArcTestnet: true,
+                providerType: 'metamask',
+              });
+            }
+          })
+          .catch((err: any) => console.warn('eth_accounts check error:', err?.message || err));
 
-      // Check if accounts already authorized
-      ethereum
-        .request({ method: 'eth_accounts' })
-        .then((accounts: string[]) => {
-          if (accounts && accounts.length > 0) {
+        // Handle account changes
+        const handleAccountsChanged = (accounts: string[]) => {
+          if (!accounts || accounts.length === 0) {
             setWallet({
+              isConnected: false,
+              address: '',
+              nativeGasUsdcBalance: 0,
+              erc20UsdcBalance: 0,
+              isArcTestnet: false,
+              providerType: 'simulated',
+            });
+          } else {
+            setWallet((prev) => ({
+              ...prev,
               isConnected: true,
               address: accounts[0],
-              nativeGasUsdcBalance: 250.0,
-              erc20UsdcBalance: 1500.0,
-              isArcTestnet: true,
               providerType: 'metamask',
-            });
+            }));
           }
-        })
-        .catch((err: any) => console.warn('eth_accounts check error:', err));
+        };
 
-      // Handle account changes
-      const handleAccountsChanged = (accounts: string[]) => {
-        if (accounts.length === 0) {
-          setWallet({
-            isConnected: false,
-            address: '',
-            nativeGasUsdcBalance: 0,
-            erc20UsdcBalance: 0,
-            isArcTestnet: false,
-            providerType: 'simulated',
-          });
-        } else {
-          setWallet((prev) => ({
-            ...prev,
-            isConnected: true,
-            address: accounts[0],
-            providerType: 'metamask',
-          }));
-        }
-      };
+        // Handle chain changes
+        const handleChainChanged = () => {
+          window.location.reload();
+        };
 
-      // Handle chain changes
-      const handleChainChanged = () => {
-        window.location.reload();
-      };
+        ethereum.on?.('accountsChanged', handleAccountsChanged);
+        ethereum.on?.('chainChanged', handleChainChanged);
 
-      ethereum.on?.('accountsChanged', handleAccountsChanged);
-      ethereum.on?.('chainChanged', handleChainChanged);
-
-      return () => {
-        ethereum.removeListener?.('accountsChanged', handleAccountsChanged);
-        ethereum.removeListener?.('chainChanged', handleChainChanged);
-      };
+        return () => {
+          ethereum.removeListener?.('accountsChanged', handleAccountsChanged);
+          ethereum.removeListener?.('chainChanged', handleChainChanged);
+        };
+      }
+    } catch (e) {
+      console.warn('Web3 auto-detect initialization warning:', e);
     }
   }, []);
 
