@@ -1,35 +1,64 @@
 import React, { useState } from 'react';
-import { CrossChainBridgeTx, ARC_TESTNET_CONFIG } from '../types/arc';
-import { ArrowUpRight, ArrowRight, RefreshCw, CheckCircle, ExternalLink, ShieldCheck } from 'lucide-react';
+import { CrossChainBridgeTx, ARC_TESTNET_CONFIG, ArcWalletState } from '../types/arc';
+import { executeArcOnChainTx } from '../utils/web3Tx';
+import { ArrowUpRight, ArrowRight, RefreshCw, CheckCircle, ExternalLink, ShieldCheck, AlertCircle } from 'lucide-react';
 
 interface CctpBridgeViewProps {
   bridgeTxs: CrossChainBridgeTx[];
+  wallet?: ArcWalletState;
   onInitiateBridge: (tx: CrossChainBridgeTx) => void;
 }
 
 export const CctpBridgeView: React.FC<CctpBridgeViewProps> = ({
   bridgeTxs,
+  wallet,
   onInitiateBridge,
 }) => {
   const [sourceChain, setSourceChain] = useState<'Ethereum Sepolia' | 'Arbitrum Sepolia' | 'Solana Devnet'>('Arbitrum Sepolia');
   const [amount, setAmount] = useState('100');
   const [bridging, setBridging] = useState(false);
   const [activeStep, setActiveStep] = useState<number | null>(null);
+  const [bridgeError, setBridgeError] = useState('');
 
   const estimatedFee = (parseFloat(amount) * 0.0025 || 0.25).toFixed(2);
 
-  const handleBridgeSubmit = (e: React.FormEvent) => {
+  const handleBridgeSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const usdcVal = parseFloat(amount);
     if (isNaN(usdcVal) || usdcVal <= 0) return;
+    setBridgeError('');
 
     setBridging(true);
-
-    // Step 1: Burn on Source
     setActiveStep(1);
 
+    // Prepare wallet state safely
+    const currentWallet: ArcWalletState = wallet?.isConnected ? wallet : {
+      isConnected: true,
+      address: '0x70997970C51812dc3A010C7d01b50e0d17dc79C8',
+      nativeGasUsdcBalance: 250,
+      erc20UsdcBalance: 1500,
+      isArcTestnet: true,
+      providerType: 'simulated',
+    };
+
+    // Execute real Web3 transaction if MetaMask available
+    const txRes = await executeArcOnChainTx(currentWallet, 'CCTP_BRIDGE_TRANSFER', {
+      amountUsdc: usdcVal,
+      title: `CCTP:${sourceChain}->Arc`,
+      recipient: ARC_TESTNET_CONFIG.cctpMessageTransmitter,
+    });
+
+    if (!txRes.success) {
+      setBridging(false);
+      setActiveStep(null);
+      setBridgeError(txRes.error || 'MetaMask köprü işlemi kullanıcı tarafından iptal edildi.');
+      return;
+    }
+
+    const realTxHash = txRes.txHash;
+
+    // Step 1 done, move to Step 2: Fetch Circle CCTP Attestation
     setTimeout(() => {
-      // Step 2: Fetch Circle CCTP Attestation
       setActiveStep(2);
 
       setTimeout(() => {
@@ -45,16 +74,16 @@ export const CctpBridgeView: React.FC<CctpBridgeViewProps> = ({
             status: 'completed',
             cctpNonce: Math.floor(Math.random() * 899999 + 100000).toString(),
             timestamp: new Date().toISOString(),
-            txHash: `0x${Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join('')}`,
+            txHash: realTxHash || `0x${Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join('')}`,
             feeUsdc: parseFloat(estimatedFee),
           };
 
           onInitiateBridge(newTx);
           setBridging(false);
           setActiveStep(null);
-        }, 1200);
-      }, 1200);
-    }, 1200);
+        }, 1000);
+      }, 1000);
+    }, 1000);
   };
 
   return (
@@ -138,6 +167,13 @@ export const CctpBridgeView: React.FC<CctpBridgeViewProps> = ({
             </div>
 
             {/* Estimated Fees */}
+            {bridgeError && (
+              <div className="p-3 bg-rose-500/10 border border-rose-500 text-rose-400 text-xs font-mono flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
+                <span>{bridgeError}</span>
+              </div>
+            )}
+
             <div className="bg-white/5 p-4 border border-white/10 space-y-2 text-xs font-mono">
               <div className="flex justify-between text-white/50">
                 <span>CCTP FEE (0.25%):</span>
@@ -237,3 +273,5 @@ export const CctpBridgeView: React.FC<CctpBridgeViewProps> = ({
     </div>
   );
 };
+
+export default CctpBridgeView;
