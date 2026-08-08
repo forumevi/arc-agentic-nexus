@@ -1,0 +1,6 @@
+{
+  "name": "ARC Agentic Hub",
+  "description": "On-Chain AI Agent Marketplace, ERC-8183 USDC Escrow Protocol & Circle CCTP Bridge on Arc L1 Testnet.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

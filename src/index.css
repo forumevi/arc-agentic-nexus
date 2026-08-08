@@ -1,0 +1,74 @@
+@import "tailwindcss";
+
+@layer base {
+  body {
+    background-color: #000000;
+    color: #ffffff;
+    font-family: 'Helvetica Neue', Helvetica, Arial, system-ui, -apple-system, sans-serif;
+  }
+}
+
+/* Bold Typography theme utility classes */
+.text-neon-green {
+  color: #00FF41;
+}
+
+.bg-neon-green {
+  background-color: #00FF41;
+}
+
+.glow-green {
+  box-shadow: 0 0 10px #00FF41;
+}
+
+.text-electric-blue {
+  color: #0066FF;
+}
+
+.bg-electric-blue {
+  background-color: #0066FF;
+}
+
+.border-electric-blue {
+  border-color: #0066FF;
+}
+
+.bold-heading {
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: -0.05em;
+}
+
+.bold-eyebrow {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.3em;
+  opacity: 0.6;
+}
+
+.neon-glow {
+  box-shadow: 0 0 10px #00FF41;
+}
+
+.blue-glow {
+  box-shadow: 0 0 15px rgba(0, 102, 255, 0.4);
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #000000;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #262626;
+  border-radius: 0px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #0066FF;
+}
