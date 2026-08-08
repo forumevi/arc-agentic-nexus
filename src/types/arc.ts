@@ -10,6 +10,7 @@ export interface ArcNetworkConfig {
   usdcContractAddress: string;
   escrowContractAddress: string;
   jobRegistryContractAddress: string;
+  cctpMessageTransmitter: string;
 }
 
 export const ARC_TESTNET_CONFIG: ArcNetworkConfig = {
@@ -24,6 +25,7 @@ export const ARC_TESTNET_CONFIG: ArcNetworkConfig = {
   usdcContractAddress: '0x07865c6E87B9F70255377e024ace6630C1Eaa37F',
   escrowContractAddress: '0x3A9b1C4d5E8f7023419999120Aa1139488Cc20A1',
   jobRegistryContractAddress: '0x8183A1C29f04128490a039d9101BC44781C200EF',
+  cctpMessageTransmitter: '0x0B925287571303B770A5844a4968383e582e21cD',
 };
 
 export interface AiAgent {
