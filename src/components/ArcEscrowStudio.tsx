@@ -1,15 +1,19 @@
 import React, { useState } from 'react';
-import { EscrowAgreement, ARC_TESTNET_CONFIG } from '../types/arc';
-import { Lock, Unlock, AlertTriangle, ExternalLink, Plus } from 'lucide-react';
+import { ethers } from 'ethers';
+import { EscrowAgreement, ARC_TESTNET_CONFIG, ArcWalletState } from '../types/arc';
+import { Lock, Unlock, AlertTriangle, ExternalLink, Plus, RefreshCw, AlertCircle } from 'lucide-react';
+import { executeArcOnChainTx } from '../utils/web3Tx';
 
 interface ArcEscrowStudioProps {
   escrows: EscrowAgreement[];
+  wallet?: ArcWalletState;
   onCreateEscrow: (escrow: EscrowAgreement) => void;
   onUpdateEscrowStatus: (escrowId: string, status: EscrowAgreement['status']) => void;
 }
 
 export const ArcEscrowStudio: React.FC<ArcEscrowStudioProps> = ({
   escrows,
+  wallet,
   onCreateEscrow,
   onUpdateEscrowStatus,
 }) => {
@@ -19,21 +23,45 @@ export const ArcEscrowStudio: React.FC<ArcEscrowStudioProps> = ({
   const [amountUsdc, setAmountUsdc] = useState('100');
   const [purpose, setPurpose] = useState('');
   const [conditions, setConditions] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [txError, setTxError] = useState('');
 
-  const handleCreateSubmit = (e: React.FormEvent) => {
+  const handleCreateSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim() || !payee.trim()) return;
+    setTxError('');
+
+    let realTxHash = '';
+    const numAmount = parseFloat(amountUsdc) || 100;
+
+    // Only invoke real MetaMask transaction if user specifically connected via MetaMask
+    if (wallet?.isConnected && wallet?.providerType === 'metamask') {
+      setIsSubmitting(true);
+      const txRes = await executeArcOnChainTx(wallet, 'LOCK_VAULT', {
+        amountUsdc: numAmount,
+        title: `Escrow:${title}`,
+        recipient: payee,
+      });
+
+      setIsSubmitting(false);
+
+      if (!txRes.success) {
+        setTxError(txRes.error || 'MetaMask transaction was cancelled or rejected.');
+        return;
+      }
+      realTxHash = txRes.txHash;
+    }
 
     const newEscrow: EscrowAgreement = {
       id: `escrow-arc-${Date.now().toString().slice(-4)}`,
       title,
-      payer: '0x7099...79C8 (Connected Wallet)',
+      payer: wallet?.address ? `${wallet.address.slice(0, 6)}...${wallet.address.slice(-4)}` : '0x7099...79C8 (Connected Wallet)',
       payee,
-      amountUsdc: parseFloat(amountUsdc) || 100,
+      amountUsdc: numAmount,
       purpose,
       status: 'funded',
       createdAt: new Date().toISOString(),
-      txHash: `0x${Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join('')}`,
+      txHash: realTxHash || `0x${Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join('')}`,
       releaseConditions: conditions || 'Satisfactory completion of task deliverables',
     };
 
@@ -43,6 +71,21 @@ export const ArcEscrowStudio: React.FC<ArcEscrowStudioProps> = ({
     setPayee('');
     setPurpose('');
     setConditions('');
+  };
+
+  const handleUpdateStatusWithMetaMask = async (escrowId: string, status: EscrowAgreement['status']) => {
+    if (wallet?.isConnected && wallet?.providerType === 'metamask') {
+      const txRes = await executeArcOnChainTx(wallet, 'RELEASE_PAYOUT', {
+        amountUsdc: 0,
+        title: `Update:${escrowId}:${status}`,
+      });
+
+      if (!txRes.success) {
+        alert('MetaMask transaction was cancelled or rejected.');
+        return;
+      }
+    }
+    onUpdateEscrowStatus(escrowId, status);
   };
 
   return (
@@ -142,13 +185,13 @@ export const ArcEscrowStudio: React.FC<ArcEscrowStudioProps> = ({
               {e.status === 'funded' && (
                 <div className="flex items-center gap-2">
                   <button
-                    onClick={() => onUpdateEscrowStatus(e.id, 'disputed')}
+                    onClick={() => handleUpdateStatusWithMetaMask(e.id, 'disputed')}
                     className="px-3.5 py-2 border border-rose-500/50 text-rose-400 hover:bg-rose-500 hover:text-black font-bold uppercase text-[10px] tracking-wider transition-colors"
                   >
                     RAISE DISPUTE
                   </button>
                   <button
-                    onClick={() => onUpdateEscrowStatus(e.id, 'released')}
+                    onClick={() => handleUpdateStatusWithMetaMask(e.id, 'released')}
                     className="px-4 py-2 bg-[#00FF41] text-black hover:bg-white font-black uppercase text-xs tracking-wider transition-colors flex items-center gap-1"
                   >
                     <Unlock className="w-3.5 h-3.5" /> RELEASE PAYOUT
@@ -256,3 +299,5 @@ export const ArcEscrowStudio: React.FC<ArcEscrowStudioProps> = ({
     </div>
   );
 };
+
+export default ArcEscrowStudio;
